@@ -190,6 +190,12 @@ async function loginCommand() {
     return;
   }
 
+  // Default to OAuth if not a TTY
+  if (!process.stdout.isTTY) {
+    await loginOAuthCommand();
+    return;
+  }
+
   // Interactive menu
   const rl = createInterface({ input: process.stdin, output: process.stderr });
   console.log('Select login method:\n');
