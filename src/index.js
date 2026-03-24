@@ -335,6 +335,32 @@ async function accountsCommand() {
     )
   );
 
+  // Deduplicate by accountUuid — keep the last (most recently added) entry
+  const seen = new Map();
+  let removed = 0;
+  for (let i = config.accounts.length - 1; i >= 0; i--) {
+    const a = config.accounts[i];
+    const uuid = profiles[i]?.accountUuid || a.accountUuid;
+    if (uuid) {
+      if (seen.has(uuid)) {
+        config.accounts.splice(i, 1);
+        profiles.splice(i, 1);
+        removed++;
+      } else {
+        seen.set(uuid, i);
+        // Update stored UUID and name from profile
+        if (profiles[i]) {
+          a.accountUuid = profiles[i].accountUuid;
+          if (profiles[i].email) a.name = profiles[i].email;
+        }
+      }
+    }
+  }
+  if (removed > 0) {
+    await saveConfig(config);
+    console.log(`Removed ${removed} duplicate account(s)\n`);
+  }
+
   for (const [i, a] of config.accounts.entries()) {
     const p = profiles[i];
 
@@ -345,7 +371,6 @@ async function accountsCommand() {
 
     // OAuth account
     const tier = p?.hasClaudeMax ? 'Max' : p?.hasClaudePro ? 'Pro' : 'subscription';
-    const email = p?.email || a.name;
     const status = p ? `Claude ${tier}` : 'unknown (profile fetch failed)';
     console.log(`  [${i + 1}] ${a.name} (${status})`);
     if (p?.email && p.email !== a.name) console.log(`       Email: ${p.email}`);
