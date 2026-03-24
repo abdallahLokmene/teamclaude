@@ -73,7 +73,7 @@ export function createProxyServer(accountManager, config, hooks = {}) {
 function logTimestamp() {
   const d = new Date();
   const pad = (n, w = 2) => String(n).padStart(w, '0');
-  return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())} ${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}.${pad(d.getMilliseconds(), 3)}`;
+  return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}.${pad(d.getMilliseconds(), 3)}`;
 }
 
 async function writeRequestLog(logDir, reqId, sections) {
