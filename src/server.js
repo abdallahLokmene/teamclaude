@@ -19,9 +19,11 @@ export function createProxyServer(accountManager, config, hooks = {}) {
 
   const server = http.createServer(async (req, res) => {
     try {
-      // Auth check
+      // Auth check — skip for localhost connections
       const clientKey = req.headers['x-api-key'];
-      if (proxyApiKey && clientKey !== proxyApiKey) {
+      const remoteAddr = req.socket.remoteAddress;
+      const isLocal = remoteAddr === '127.0.0.1' || remoteAddr === '::1' || remoteAddr === '::ffff:127.0.0.1';
+      if (proxyApiKey && clientKey !== proxyApiKey && !isLocal) {
         res.writeHead(401, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({
           type: 'error',
