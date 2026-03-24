@@ -31,8 +31,8 @@ const DEFAULT_CLIENT_ID = '9d1c250a-e61b-44d9-88ed-5944d1962f5e';
 export async function refreshAccessToken(refreshToken, endpoint = DEFAULT_TOKEN_ENDPOINT) {
   const res = await fetch(endpoint, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
       grant_type: 'refresh_token',
       refresh_token: refreshToken,
       client_id: DEFAULT_CLIENT_ID,
@@ -108,12 +108,13 @@ export async function loginOAuth() {
   console.log('Exchanging authorization code for tokens...');
   const tokenRes = await fetch(OAUTH_TOKEN, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      grant_type: 'authorization_code',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
       code,
-      redirect_uri: redirectUri,
+      state,
+      grant_type: 'authorization_code',
       client_id: OAUTH_CLIENT_ID,
+      redirect_uri: redirectUri,
       code_verifier: codeVerifier,
     }),
   });
