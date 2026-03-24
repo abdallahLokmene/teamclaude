@@ -5,9 +5,10 @@ const HOP_BY_HOP_HEADERS = new Set([
   'te', 'trailer', 'upgrade', 'proxy-authorization', 'proxy-authenticate',
 ]);
 
-export function createProxyServer(accountManager, config) {
+export function createProxyServer(accountManager, config, hooks = {}) {
   const upstream = config.upstream || 'https://api.anthropic.com';
   const proxyApiKey = config.proxy?.apiKey;
+  let requestCounter = 0;
 
   const server = http.createServer(async (req, res) => {
     try {
@@ -29,6 +30,10 @@ export function createProxyServer(accountManager, config) {
         return;
       }
 
+      // Track request
+      const reqId = ++requestCounter;
+      hooks.onRequestStart?.(reqId, { method: req.method, path: req.url });
+
       // Buffer request body (needed for retry on 429)
       const bodyChunks = [];
       for await (const chunk of req) {
@@ -36,7 +41,13 @@ export function createProxyServer(accountManager, config) {
       }
       const body = Buffer.concat(bodyChunks);
 
-      await forwardRequest(req, res, body, accountManager, upstream, 0);
+      const ctx = { account: null, status: null };
+      await forwardRequest(req, res, body, accountManager, upstream, 0, hooks, reqId, ctx);
+
+      hooks.onRequestEnd?.(reqId, {
+        method: req.method, path: req.url,
+        account: ctx.account, status: ctx.status,
+      });
     } catch (err) {
       console.error('[TeamClaude] Unhandled error:', err);
       if (!res.headersSent) {
@@ -52,12 +63,13 @@ export function createProxyServer(accountManager, config) {
   return server;
 }
 
-async function forwardRequest(req, res, body, accountManager, upstream, retryCount) {
+async function forwardRequest(req, res, body, accountManager, upstream, retryCount, hooks, reqId, ctx) {
   const maxRetries = accountManager.accounts.length;
 
   // Select account
   const account = accountManager.getActiveAccount();
   if (!account) {
+    ctx.status = 429;
     const status = accountManager.getStatus();
     const retryAfter = computeRetryAfter(status.accounts);
     res.writeHead(429, {
@@ -74,10 +86,14 @@ async function forwardRequest(req, res, body, accountManager, upstream, retryCou
     return;
   }
 
+  // Track which account handles this request
+  ctx.account = account.name;
+  hooks.onRequestRouted?.(reqId, { account: account.name });
+
   // Refresh OAuth token if needed
   await accountManager.ensureTokenFresh(account.index);
   if (account.status === 'error' && retryCount < maxRetries) {
-    return forwardRequest(req, res, body, accountManager, upstream, retryCount + 1);
+    return forwardRequest(req, res, body, accountManager, upstream, retryCount + 1, hooks, reqId, ctx);
   }
 
   // Build upstream request headers
@@ -114,8 +130,10 @@ async function forwardRequest(req, res, body, accountManager, upstream, retryCou
       const retryAfter = parseInt(upstreamRes.headers.get('retry-after') || '60', 10);
       accountManager.markRateLimited(account.index, retryAfter);
       await upstreamRes.arrayBuffer(); // drain body
-      return forwardRequest(req, res, body, accountManager, upstream, retryCount + 1);
+      return forwardRequest(req, res, body, accountManager, upstream, retryCount + 1, hooks, reqId, ctx);
     }
+
+    ctx.status = upstreamRes.status;
 
     // Build response headers (skip hop-by-hop)
     const responseHeaders = {};
@@ -145,8 +163,9 @@ async function forwardRequest(req, res, body, accountManager, upstream, retryCou
 
     if (retryCount < maxRetries) {
       account.status = 'error';
-      return forwardRequest(req, res, body, accountManager, upstream, retryCount + 1);
+      return forwardRequest(req, res, body, accountManager, upstream, retryCount + 1, hooks, reqId, ctx);
     }
+    ctx.status = 502;
 
     if (!res.headersSent) {
       res.writeHead(502, { 'Content-Type': 'application/json' });

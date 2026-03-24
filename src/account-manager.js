@@ -198,6 +198,40 @@ export class AccountManager {
   }
 
   /**
+   * Add a new account at runtime.
+   */
+  addAccount(acctData) {
+    const index = this.accounts.length;
+    this.accounts.push({
+      index,
+      name: acctData.name,
+      type: acctData.type,
+      credential: acctData.accessToken || acctData.apiKey,
+      refreshToken: acctData.refreshToken || null,
+      expiresAt: acctData.expiresAt || null,
+      status: 'active',
+      quota: { tokensLimit: null, tokensRemaining: null, requestsLimit: null, requestsRemaining: null, resetsAt: null },
+      usage: { totalInputTokens: 0, totalOutputTokens: 0, totalRequests: 0, lastUsed: null },
+      rateLimitedUntil: null,
+    });
+    return index;
+  }
+
+  /**
+   * Remove an account by index.
+   */
+  removeAccount(index) {
+    if (index < 0 || index >= this.accounts.length) return;
+    this.accounts.splice(index, 1);
+    this.accounts.forEach((a, i) => a.index = i);
+    if (this.currentIndex >= this.accounts.length) {
+      this.currentIndex = Math.max(0, this.accounts.length - 1);
+    } else if (this.currentIndex > index) {
+      this.currentIndex--;
+    }
+  }
+
+  /**
    * Return a status summary of all accounts (safe to expose, no credentials).
    */
   getStatus() {

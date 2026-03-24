@@ -6,6 +6,7 @@ import { loadOrCreateConfig, saveConfig, getConfigPath } from './config.js';
 import { AccountManager } from './account-manager.js';
 import { createProxyServer } from './server.js';
 import { importCredentials, loginOAuth } from './oauth.js';
+import { TUI } from './tui.js';
 
 const args = process.argv.slice(2);
 const command = args[0];
@@ -74,37 +75,61 @@ async function serverCommand() {
   const threshold = config.switchThreshold || 0.98;
   const accountManager = new AccountManager(accounts, threshold);
   const port = config.proxy.port;
-  const server = createProxyServer(accountManager, config);
+  const useTUI = process.stdout.isTTY && process.stdin.isTTY;
+
+  let tui = null;
+  let hooks = {};
+
+  if (useTUI) {
+    tui = new TUI({
+      accountManager, config, saveConfig,
+      onQuit: () => { server.close(() => process.exit(0)); },
+    });
+    hooks = {
+      onRequestStart: (id, info) => tui.onRequestStart(id, info),
+      onRequestRouted: (id, info) => tui.onRequestRouted(id, info),
+      onRequestEnd: (id, info) => tui.onRequestEnd(id, info),
+    };
+  }
+
+  const server = createProxyServer(accountManager, config, hooks);
 
   server.listen(port, () => {
-    const sep = '='.repeat(60);
-    console.log('');
-    console.log(sep);
-    console.log('  TeamClaude Proxy');
-    console.log(sep);
-    console.log(`  Port:       ${port}`);
-    console.log(`  Accounts:   ${accounts.length}`);
-    console.log(`  Threshold:  ${(threshold * 100).toFixed(0)}%`);
-    console.log(`  Upstream:   ${config.upstream || 'https://api.anthropic.com'}`);
-    console.log('');
-    accounts.forEach((a, i) => {
-      console.log(`  [${i + 1}] ${a.name} (${a.type})`);
-    });
-    console.log('');
-    console.log('  Run Claude through proxy:  teamclaude run');
-    console.log('  Show env vars:             teamclaude env');
-    console.log(sep);
-    console.log('');
+    if (tui) {
+      tui.start();
+      console.log(`Listening on port ${port} with ${accounts.length} account(s)`);
+    } else {
+      const sep = '='.repeat(60);
+      console.log('');
+      console.log(sep);
+      console.log('  TeamClaude Proxy');
+      console.log(sep);
+      console.log(`  Port:       ${port}`);
+      console.log(`  Accounts:   ${accounts.length}`);
+      console.log(`  Threshold:  ${(threshold * 100).toFixed(0)}%`);
+      console.log(`  Upstream:   ${config.upstream || 'https://api.anthropic.com'}`);
+      console.log('');
+      accounts.forEach((a, i) => {
+        console.log(`  [${i + 1}] ${a.name} (${a.type})`);
+      });
+      console.log('');
+      console.log('  Run Claude through proxy:  teamclaude run');
+      console.log('  Show env vars:             teamclaude env');
+      console.log(sep);
+      console.log('');
+    }
   });
 
-  process.on('SIGINT', () => {
-    console.log('\n[TeamClaude] Shutting down...');
-    server.close(() => process.exit(0));
-  });
-  process.on('SIGTERM', () => {
-    console.log('\n[TeamClaude] Shutting down...');
-    server.close(() => process.exit(0));
-  });
+  if (!tui) {
+    process.on('SIGINT', () => {
+      console.log('\n[TeamClaude] Shutting down...');
+      server.close(() => process.exit(0));
+    });
+    process.on('SIGTERM', () => {
+      console.log('\n[TeamClaude] Shutting down...');
+      server.close(() => process.exit(0));
+    });
+  }
 }
 
 // ── import ──────────────────────────────────────────────────
