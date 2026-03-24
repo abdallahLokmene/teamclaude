@@ -7,9 +7,20 @@
   "bin": {
     "teamclaude": "src/index.js"
   },
+  "files": [
+    "src/"
+  ],
   "scripts": {
     "start": "node src/index.js"
   },
+  "keywords": [
+    "claude",
+    "anthropic",
+    "proxy",
+    "load-balancer",
+    "multi-account"
+  ],
+  "license": "MIT",
   "engines": {
     "node": ">=18.0.0"
   }
