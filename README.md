@@ -10,8 +10,9 @@ Sits transparently between Claude Code and the Anthropic API, managing multiple 
 
 - **Automatic account rotation** — switches to the next account when session (5h) or weekly (7d) quota reaches the configured threshold (default 98%)
 - **Auto-retry on 429** — if an account is rate-limited, transparently retries with the next one
-- **Interactive TUI** — real-time dashboard with quota bars, activity log, and keyboard controls
-- **OAuth token refresh** — proactively refreshes expiring tokens and persists them to config
+- **Interactive TUI** — real-time dashboard with color-coded quota bars showing reset countdowns, activity log, and keyboard controls
+- **OAuth token refresh** — proactively refreshes expiring tokens, intercepts client token renewals, and persists them to config
+- **Hot-reload accounts** — add accounts via `import` or `login` while the server is running, press **R** to pick them up
 - **Request logging** — optional full request/response logging for debugging
 - **Zero dependencies** — uses only Node.js built-in modules
 
@@ -23,12 +24,11 @@ Requires Node.js 18+.
 # Install
 npm install -g @karpeleslab/teamclaude
 
-# Import your current Claude Code credentials
-teamclaude import
+# Add your first account (opens browser for OAuth)
+teamclaude login
 
-# Import a second account (log into it in Claude Code first, then import)
-# claude /login
-# teamclaude import
+# Add a second account
+teamclaude login
 
 # Start the proxy
 teamclaude server
@@ -37,27 +37,37 @@ teamclaude server
 teamclaude run
 ```
 
-## Adding Accounts
-
-### Import from Claude Code (recommended)
-
-The easiest way to add accounts. Log into each account in Claude Code, then import:
+You can also import existing Claude Code credentials instead of logging in:
 
 ```bash
-# Log into your first account in Claude Code
-claude /login
-
-# Import it
-teamclaude import
-
-# Switch to another account in Claude Code
-claude /login
-
-# Import that one too
-teamclaude import
+claude /login           # Log into an account in Claude Code
+teamclaude import       # Import its credentials
 ```
 
-Each import auto-detects the account email and subscription tier. Re-importing the same account updates its credentials.
+## Adding Accounts
+
+### OAuth Login (recommended)
+
+The easiest way to add accounts — opens your browser for authentication:
+
+```bash
+teamclaude login
+```
+
+Uses the same OAuth flow as Claude Code. Auto-detects the account email and subscription tier. Logging in with the same account again updates its credentials.
+
+You can add accounts while the server is running — press **R** in the TUI to reload.
+
+### Import from Claude Code
+
+If you already have Claude Code set up, you can import its credentials directly:
+
+```bash
+claude /login           # Log into an account in Claude Code
+teamclaude import       # Import its credentials
+```
+
+Re-importing the same account updates its credentials.
 
 ### API Key
 
@@ -66,16 +76,6 @@ For Anthropic API key accounts (billed via Console):
 ```bash
 teamclaude login --api
 ```
-
-### OAuth Login (experimental)
-
-Direct browser-based OAuth login without needing Claude Code:
-
-```bash
-teamclaude login
-```
-
-> **Note:** OAuth login is currently experimental. Tokens obtained this way may not work for proxying `/v1/messages` requests. Use `teamclaude import` as the reliable method.
 
 ## Usage
 
@@ -88,7 +88,7 @@ teamclaude server
 When running from a TTY, shows an interactive TUI with:
 - Account table with session/weekly quota progress bars
 - Real-time activity log with request tracking
-- Keyboard shortcuts: **s**witch, **a**dd, **r**emove, **q**uit
+- Keyboard shortcuts: **s**witch, **a**dd, **r**emove, **R**eload, **q**uit
 
 Falls back to plain log output when not a TTY (e.g. running as a service).
 
