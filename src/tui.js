@@ -283,7 +283,7 @@ export class TUI {
       if (count > 0) {
         this._addLog(`Synced ${count} new account(s) from config`);
       } else {
-        this._addLog('Config reloaded, no new accounts');
+        this._addLog('Config reloaded, credentials refreshed');
       }
     } catch (e) {
       this._addLog(`Sync failed: ${e.message}`);

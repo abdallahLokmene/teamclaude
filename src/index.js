@@ -95,7 +95,16 @@ async function serverCommand() {
     const account = accountManager.accounts[idx];
     if (!account) return;
     atomicConfigUpdate(diskConfig => {
-      syncNewAccountsFromDisk(diskConfig, config, accountManager);
+      // Pick up any new accounts from disk so index matching stays correct
+      // (only add, don't refresh credentials — we're about to write the authoritative tokens)
+      for (const diskAcct of diskConfig.accounts) {
+        const known = (diskAcct.accountUuid && config.accounts.some(a => a.accountUuid === diskAcct.accountUuid))
+          || config.accounts.some(a => a.name === diskAcct.name);
+        if (!known) {
+          config.accounts.push(diskAcct);
+          accountManager.addAccount(diskAcct);
+        }
+      }
       // Match by UUID first, then by name — index may have shifted
       const cfgIdx = findConfigAccount(diskConfig, account);
       if (cfgIdx >= 0) {
@@ -114,8 +123,8 @@ async function serverCommand() {
   if (useTUI) {
     tui = new TUI({
       accountManager, config,
-      saveConfig: () => atomicConfigUpdate(diskConfig => {
-        syncNewAccountsFromDisk(diskConfig, config, accountManager);
+      saveConfig: () => atomicConfigUpdate(async diskConfig => {
+        await syncAccountsFromDisk(diskConfig, config, accountManager);
         // Write in-memory accounts back, preserving extra disk-only fields
         diskConfig.accounts = config.accounts.map(a => {
           const diskAcct = diskConfig.accounts.find(
@@ -127,9 +136,7 @@ async function serverCommand() {
       syncAccounts: async () => {
         const diskConfig = await loadConfig();
         if (!diskConfig) return 0;
-        const before = accountManager.accounts.length;
-        syncNewAccountsFromDisk(diskConfig, config, accountManager);
-        return accountManager.accounts.length - before;
+        return syncAccountsFromDisk(diskConfig, config, accountManager);
       },
       onQuit: () => { server.close(() => process.exit(0)); },
     });
@@ -607,22 +614,64 @@ function findConfigAccount(diskConfig, account) {
 }
 
 /**
- * Detect accounts added to disk config by external processes and add them
- * to the running AccountManager + in-memory config.
+ * Sync accounts from disk config: add new accounts and refresh credentials
+ * for existing ones (handles re-imported OAuth tokens, rotated API keys, etc.).
+ * Returns the number of new accounts added.
  */
-function syncNewAccountsFromDisk(diskConfig, memConfig, accountManager) {
+async function syncAccountsFromDisk(diskConfig, memConfig, accountManager) {
+  let added = 0;
   for (const diskAcct of diskConfig.accounts) {
-    const knownByUuid = diskAcct.accountUuid &&
-      memConfig.accounts.some(a => a.accountUuid === diskAcct.accountUuid);
-    const knownByName = memConfig.accounts.some(a => a.name === diskAcct.name);
+    const matchByUuid = diskAcct.accountUuid &&
+      memConfig.accounts.findIndex(a => a.accountUuid === diskAcct.accountUuid);
+    const matchByName = memConfig.accounts.findIndex(a => a.name === diskAcct.name);
+    const memIdx = (matchByUuid >= 0 ? matchByUuid : null) ?? (matchByName >= 0 ? matchByName : -1);
 
-    if (!knownByUuid && !knownByName) {
+    if (memIdx < 0) {
       // New account discovered on disk — add to running server
       memConfig.accounts.push(diskAcct);
       accountManager.addAccount(diskAcct);
+      added++;
       console.log(`[TeamClaude] Picked up new account "${diskAcct.name}" from config`);
+      continue;
+    }
+
+    // Existing account — resolve fresh credentials from disk
+    let freshCred = null;
+    if (diskAcct.type === 'oauth' && diskAcct.importFrom) {
+      try {
+        const creds = await importCredentials(diskAcct.importFrom);
+        freshCred = { accessToken: creds.accessToken, refreshToken: creds.refreshToken, expiresAt: creds.expiresAt };
+      } catch (err) {
+        console.error(`[TeamClaude] Re-import failed for "${diskAcct.name}": ${err.message}`);
+      }
+    } else if (diskAcct.type === 'oauth' && diskAcct.accessToken) {
+      freshCred = { accessToken: diskAcct.accessToken, refreshToken: diskAcct.refreshToken, expiresAt: diskAcct.expiresAt };
+    } else if (diskAcct.type === 'apikey' && diskAcct.apiKey) {
+      freshCred = { apiKey: diskAcct.apiKey };
+    }
+
+    if (!freshCred) continue;
+
+    // Find the corresponding AccountManager entry and update credentials
+    const mgr = accountManager.accounts.find(a =>
+      (diskAcct.accountUuid && a.accountUuid === diskAcct.accountUuid) || a.name === diskAcct.name
+    );
+    if (!mgr) continue;
+
+    if (freshCred.accessToken) {
+      const changed = mgr.credential !== freshCred.accessToken ||
+        mgr.refreshToken !== freshCred.refreshToken;
+      if (changed) {
+        accountManager.updateAccountTokens(mgr.index, freshCred);
+        console.log(`[TeamClaude] Refreshed credentials for "${mgr.name}"`);
+      }
+    } else if (freshCred.apiKey && mgr.credential !== freshCred.apiKey) {
+      mgr.credential = freshCred.apiKey;
+      if (mgr.status === 'error') mgr.status = 'active';
+      console.log(`[TeamClaude] Updated API key for "${mgr.name}"`);
     }
   }
+  return added;
 }
 
 // ── helpers ─────────────────────────────────────────────────
