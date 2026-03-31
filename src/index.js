@@ -661,7 +661,11 @@ async function syncAccountsFromDisk(diskConfig, memConfig, accountManager) {
     if (freshCred.accessToken) {
       const changed = mgr.credential !== freshCred.accessToken ||
         mgr.refreshToken !== freshCred.refreshToken;
-      if (changed) {
+      // Don't overwrite in-memory credentials with staler ones from disk
+      // (e.g. after a TUI import updated the AM before saveConfig wrote to disk)
+      const diskIsStaler = freshCred.expiresAt && mgr.expiresAt &&
+        freshCred.expiresAt < mgr.expiresAt;
+      if (changed && !diskIsStaler) {
         accountManager.updateAccountTokens(mgr.index, freshCred);
         console.log(`[TeamClaude] Refreshed credentials for "${mgr.name}"`);
       }

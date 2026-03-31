@@ -252,7 +252,11 @@ export class AccountManager {
         this._onTokenRefresh?.(accountIndex, newTokens);
       } catch (err) {
         console.error(`[TeamClaude] Token refresh failed for "${account.name}": ${err.message}`);
-        account.status = 'error';
+        // Only mark as error if the access token is actually expired;
+        // a failed proactive refresh shouldn't kill a still-valid token
+        if (!account.expiresAt || Date.now() >= account.expiresAt) {
+          account.status = 'error';
+        }
       } finally {
         account._refreshPromise = null;
       }
