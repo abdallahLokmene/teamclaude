@@ -124,8 +124,8 @@ async function serverCommand() {
     tui = new TUI({
       accountManager, config,
       saveConfig: () => atomicConfigUpdate(async diskConfig => {
-        await syncAccountsFromDisk(diskConfig, config, accountManager);
-        // Write in-memory accounts back, preserving extra disk-only fields
+        // Write in-memory accounts as the authoritative state, preserving
+        // extra disk-only fields (e.g. importFrom) where the account still exists
         diskConfig.accounts = config.accounts.map(a => {
           const diskAcct = diskConfig.accounts.find(
             d => (a.accountUuid && d.accountUuid === a.accountUuid) || d.name === a.name
