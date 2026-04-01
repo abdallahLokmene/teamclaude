@@ -64,15 +64,6 @@ export class AccountManager {
       console.log(`[TeamClaude] Account "${account.name}" rate limit expired, marking active`);
     }
 
-    // Auto-recover from transient errors after errorUntil expires
-    if (account.status === 'error' && account.errorUntil) {
-      if (Date.now() < account.errorUntil) return false;
-      account.status = 'active';
-      account.errorUntil = null;
-      account._transientErrors = 0;
-      console.log(`[TeamClaude] Account "${account.name}" transient error expired, marking active`);
-    }
-
     if (account.status === 'exhausted' || account.status === 'error') return false;
     if (this._isNearQuota(account)) return false;
 

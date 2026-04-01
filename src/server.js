@@ -357,15 +357,14 @@ async function forwardRequest(req, res, body, accountManager, upstream, retryCou
         err.code === 'ECONNRESET' || err.code === 'ECONNREFUSED' ||
         err.code === 'ETIMEDOUT' || err.code === 'UND_ERR_CONNECT_TIMEOUT');
 
+    // Transient network errors: just close the connection and let the client retry
     if (isTransient) {
-      const backoff = Math.min(1000 * 2 ** (account._transientErrors || 0), 32_000);
-      account._transientErrors = (account._transientErrors || 0) + 1;
-      account.status = 'error';
-      account.errorUntil = Date.now() + backoff;
+      res.destroy();
+      return;
     }
 
     if (retryCount < maxRetries && !res.headersSent) {
-      if (!isTransient) account.status = 'error';
+      account.status = 'error';
       return forwardRequest(req, res, body, accountManager, upstream, retryCount + 1, hooks, reqId, ctx, logDir);
     }
     ctx.status = 502;
